@@ -1,0 +1,7 @@
+* Introduction
+Download book from Safari Online into ePub format
+
+* Installation
+Install pipenv, then
+pipenv install
+
