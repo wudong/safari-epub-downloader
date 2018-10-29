@@ -1,6 +1,6 @@
-from EpubManager import EpubManager
-from SafariApi import SafariApi
-from SafariBook import SafariBook
+from epubgen.EpubManager import EpubManager
+from epubgen.SafariApi import SafariApi
+from epubgen.SafariBook import SafariBook
 
 
 def test_get_base_name_of_url():

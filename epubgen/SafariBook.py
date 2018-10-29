@@ -50,7 +50,7 @@ class SafariBook:
         return [author["name"] for author in self.book_info["authors"]]
 
     @staticmethod
-    def from_json_file(working_path):
+    def from_json_file_from_work_dir(working_path):
         return SafariBook.from_json_file("{}/{}".format(working_path, "info.json"),
                                          "{}/{}".format(working_path, "chapters.json"),
                                          "{}/{}".format(working_path, "toc.json"),

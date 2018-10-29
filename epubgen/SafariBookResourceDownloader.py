@@ -1,7 +1,6 @@
 import json
-from pathlib import Path
 
-import SafariApi
+from epubgen import SafariApi
 
 
 class SafariBookResourceDownloader:
@@ -12,11 +11,10 @@ class SafariBookResourceDownloader:
     def download(self, work_dir, book_id):
         info = self.api.get_book_info(book_id)
         chapters = self.api.get_all_book_chapters(book_id)
-        self.download_all_resources(work_dir, book_id, info, chapters)
+        self.download_all_resources(work_dir, info, chapters)
 
     def download_all_resources(self,
                                work_dir,
-                               book_id,
                                book_info,
                                book_chapters):
 
@@ -37,9 +35,9 @@ class SafariBookResourceDownloader:
                       for chapter in book_chapters
                       for image in chapter["images"]]
 
-        cover_url = book_info["cover"]
+        cover_url = f"{book_info['cover']}896h/"
         toc_url = book_info["toc"]
 
-        self.api.download(work_dir, book_id, all_chapter_html_content_urls,
+        self.api.download(work_dir, all_chapter_html_content_urls,
                           style_sheet_urls, image_urls, cover_url,
                           toc_url)

@@ -4,7 +4,7 @@ import os
 import sys
 import requests
 import logging
-from lxml import html, etree
+from lxml import html
 from urllib.parse import urljoin, urlsplit, urlparse
 from pathlib import Path
 
@@ -30,14 +30,9 @@ class SafariApi:
                       "Chrome/62.0.3202.94 Safari/537.36"
     }
 
-    def __init__(self):
+    def __init__(self, identity):
         # a dictionary represent the cookies.
-        self.cookies = {}
-
-    @staticmethod
-    def request_error_logging_and_exit(*error_message):
-        logging.error("Error while making request: ", "\n".join(error_message))
-        sys.exit(1)
+        self.identity = identity
 
     @staticmethod
     def write_response_to_file(response, filename):
@@ -48,6 +43,9 @@ class SafariApi:
         with open(filename, 'wb') as i:
             for chunk in response.iter_content(1024):
                 i.write(chunk)
+
+    def get_identity(self):
+        return self.identity
 
     def get_api_url(self, book_id: str):
         return self.API_TEMPLATE.format(book_id)
@@ -78,7 +76,7 @@ class SafariApi:
         return response
 
     def return_cookies(self):
-        return " ".join(["{0}={1};".format(k, v) for k, v in self.cookies.items()])
+        return " ".join(["{0}={1};".format(k, v) for k, v in self.identity.get_identity().items()])
 
     def return_headers(self, url):
         if "safaribooksonline" in urlsplit(url).netloc:
@@ -91,11 +89,14 @@ class SafariApi:
 
     def update_cookies(self, jar):
         for cookie in jar:
-            self.cookies.update({
+            self.identity.get_cookie().update({
                 cookie.name: cookie.value
             })
 
-    def do_login(self, email, password):
+    def do_login(self):
+        if self.identity.is_logged_in():
+            return True
+
         response = self.requests_provider(self.BASE_URL)
         if response == 0:
             logging.error("Login: unable to reach Safari Books Online. Try again...")
@@ -106,12 +107,13 @@ class SafariApi:
 
         except (html.etree.ParseError, html.etree.ParserError) as parsing_error:
             logging.error(parsing_error)
-            SafariApi.request_error_logging_and_exit("Login: error trying to parse the home of Safari Books Online.")
+            logging.error("Login: error trying to parse the home of Safari Books Online.")
+            return False
 
         if not len(csrf):
-            SafariApi.request_error_logging_and_exit("Login: no CSRF Token found in the page.",
-                                                     "Unable to continue the login.",
-                                                     "Try again...")
+            logging.error(f"Login: no CSRF Token found in the page."
+                          f"Unable to continue the login")
+            return False
 
         csrf = csrf[0].attrib["value"]
         response = self.requests_provider(
@@ -119,7 +121,7 @@ class SafariApi:
             post=True,
             data=(
                 ("csrfmiddlewaretoken", ""), ("csrfmiddlewaretoken", csrf),
-                ("email", email), ("password1", password),
+                ("email", self.identity.get_username()), ("password1", self.identity.get_password()),
                 ("is_login_form", "true"), ("leaveblank", ""),
                 ("dontchange", "http://")
             ),
@@ -127,8 +129,8 @@ class SafariApi:
         )
 
         if response == 0:
-            SafariApi.request_error_logging_and_exit("Login: unable to perform auth to Safari Books Online.\n "
-                                                     "Try again...")
+            logging.error("Login: unable to perform auth to Safari Books Online.")
+            return False
 
         # redirect means success?
         if response.status_code != 302:
@@ -141,25 +143,28 @@ class SafariApi:
                            (["    `ReCaptcha required (wait or do logout from the website).`"] if len(
                                recaptcha) else [])
                 logging.error(messages)
-                SafariApi.request_error_logging_and_exit("Login: unable to perform auth login to Safari Books Online.")
+                logging.error("Login: unable to perform auth login to Safari Books Online.")
+                return False
 
             except (html.etree.ParseError, html.etree.ParserError) as parsing_error:
                 logging.error(parsing_error)
-                SafariApi.request_error_logging_and_exit(
-                    "Login: your login went wrong and it encountered in an error" +
-                    " trying to parse the login details of Safari Books Online. Try again..."
+                logging.error(
+                    f"Login: your login went wrong and it encountered in an error" 
+                    f" trying to parse the login details of Safari Books Online."
                 )
+                return False
         else:
             logging.info("Logging success")
+            self.identity.log_in()
+            return True
 
     @staticmethod
     def response_to_json(response):
-        if response == 0:
-            SafariApi.request_error_logging_and_exit("API: unable to retrieve book info.")
-
         json_response = response.json()
+
         if not isinstance(json_response, dict) or len(json_response.keys()) == 1:
-            SafariApi.request_error_logging_and_exit("Error while calling Book API", json_response)
+            logging.info("Error while calling Book API", json_response)
+            raise RuntimeError(f"Error while calling Book API with result: {json_response}")
 
         return json_response
 
@@ -196,7 +201,7 @@ class SafariApi:
         json_response = SafariApi.response_to_json(response)
 
         if "results" not in json_response or not len(json_response["results"]):
-            SafariApi.request_error_logging_and_exit("API: unable to retrieve book chapters.")
+            raise RuntimeError("API: unable to retrieve book chapters.")
 
         return json_response
 
@@ -222,8 +227,7 @@ class SafariApi:
         """
         response = self.requests_provider(book_info["cover"], update_cookies=False, stream=True)
         if response == 0:
-            logging.error("Error trying to retrieve the cover: %s" % book_info["cover"])
-            return False
+            raise RuntimeError(f"Error trying to retrieve the cover: {book_info['cover']}")
 
         file_ext = response.headers["Content-Type"].split("/")[-1]
         # so this written the cover image into a file into the image directory.
@@ -235,23 +239,6 @@ class SafariApi:
         response = self.requests_provider(urljoin(self.get_api_url(book_id), "toc/"))
         json_response = SafariApi.response_to_json(response)
         return json_response
-
-    def get_and_parse_html(self, url):
-        response = self.requests_provider(url)
-        if response == 0 or response.status_code != 200:
-            SafariApi.request_error_logging_and_exit(
-                "Crawler: error trying to retrieve this page: ", url)
-
-        root = None
-
-        try:
-            root = html.fromstring(response.text, base_url=self.BASE_URL)
-        except (html.etree.ParseError, html.etree.ParserError) as parsing_error:
-            logging.error(parsing_error)
-            SafariApi.request_error_logging_and_exit(
-                "Crawler: error trying to parse this page: ", url)
-
-        return root
 
     def get_and_save_to_file(self, url, filename):
         """
@@ -268,13 +255,13 @@ class SafariApi:
         url_path = urlparse(url).path
         return url_path.split("/")[-1]
 
-    def download(self, workdir, book_id, chapters_urls, stylesheet_urls,
+    def download(self, work_dir, chapters_urls, stylesheet_urls,
                  images_urls, cover_url, toc_url):
         for resource in set(chapters_urls).union(stylesheet_urls).union(images_urls):
             base_name = resource[1]
-            file_name = "{}/{}".format(workdir, base_name)
+            file_name = f"{work_dir}/{base_name}"
             self.get_and_save_to_file(resource[0], file_name)
 
-        self.get_and_save_to_file(cover_url, "{}/cover.jpg".format(workdir))
-        self.get_and_save_to_file(toc_url, "{}/toc.json".format(workdir))
+        self.get_and_save_to_file(cover_url, f"{work_dir}/cover.jpg")
+        self.get_and_save_to_file(toc_url, f"{work_dir}/toc.json")
 

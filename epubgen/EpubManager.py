@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from SafariBook import SafariBook
+from epubgen.SafariBook import SafariBook
 from ebooklib import epub
 
 
@@ -29,13 +29,11 @@ class EpubManager:
     def add_chapter(self, chapter):
         file_name = chapter["full_path"]
         title = chapter["title"]
-
         file_name_xhtml = file_name
-        #str(Path(file_name).with_suffix(".xhtml"))
-
         item = epub.EpubHtml(title=title,
                              file_name=file_name_xhtml,
                              lang=self.book.get_language())
+                             #media_type="application/xhtml+xml")
 
         for ss in [stylesheet["full_path"] for stylesheet in chapter["stylesheets"]]:
             item.add_link(href=ss, rel='stylesheet', type='text/css')
@@ -44,11 +42,27 @@ class EpubManager:
         self.epub_book.add_item(item)
         self.epub_book.spine.append(item)
 
-    def add_image(self, image_filename):
+    def add_image(self, image_filename: str):
+
+        if image_filename == "cover.jpeg" or image_filename == "cover.jpg":
+            return
+
+        def get_image_type (_image_filename):
+            suffix = Path(_image_filename).suffix
+            if ".jpeg" == suffix.lower() or ".jpg" == suffix.lower():
+                return "image/jpeg"
+            if ".png" == suffix.lower():
+                return "image/png"
+            if ".svg" == suffix.lower():
+                return "image/svg+xml"
+            raise RuntimeError(f"Unsupported image file format: {_image_filename}")
+
         item = epub.EpubImage()
-        item.id = "image_" + image_filename
+        item.id = "image_" + image_filename.replace("/", "_")
         item.file_name = image_filename
-        item.media_type = "image/jpeg"
+
+        item.media_type = get_image_type(image_filename)
+
         item.content = self.book.get_binary_content(image_filename)
         self.epub_book.add_item(item)
 
@@ -96,7 +110,8 @@ class EpubManager:
 
     @staticmethod
     def toc_to_epublink(toc_element):
-        return epub.Link(toc_element["href"], toc_element["label"], toc_element["id"])
+        __id_ = toc_element["id"] + "_" + toc_element.get('fragment', "__")
+        return epub.Link(toc_element["href"], toc_element["label"], uid=__id_)
 
     def toc_to_epubsection(toc_element):
         return epub.Section(toc_element["label"], toc_element["href"])
