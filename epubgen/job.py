@@ -2,7 +2,7 @@ import logging
 import uuid
 from enum import Enum
 
-from epubgen.Main import Main
+from epubgen.Facade import Facade
 import os
 
 
@@ -29,7 +29,7 @@ class Job:
 
         # trying login
         try:
-            main = Main(identity=self.identity, work_dir=self.work_dir)
+            main = Facade(identity=self.identity, work_dir=self.work_dir)
         except RuntimeError:
             self.status = Status.LOGIN_FAILED
             return
@@ -54,36 +54,6 @@ class Job:
 
     def __str__(self):
         return f"Job{{book_id: {self.book_id}, identity: {self.identity.get_username()}, status: {self.status}}}"
-
-
-class Identity:
-    def __init__(self, username, password):
-        self.user_name = username
-        self.password = password
-        self.cookie = {}
-        self.logged_in = False
-        self.id = f"uid_{uuid.uuid4()}"
-
-    def get_username(self):
-        return self.user_name
-
-    def get_password(self):
-        return self.password
-
-    def get_identity(self):
-        return self.cookie
-
-    def log_in(self):
-        self.logged_in = True
-
-    def is_logged_in(self):
-        return self.logged_in
-
-    def get_cookie(self):
-        return self.cookie
-
-    def get_id(self):
-        return self.id
 
 
 class Status(Enum):

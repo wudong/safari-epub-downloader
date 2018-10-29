@@ -74,7 +74,7 @@ class EpubManager:
         self.epub_book.add_item(item)
 
     def write_to_file(self, workdir):
-        file_name = "{}/{}.epub".format(workdir, self.book.get_book_id())
+        file_name = "{}/{}-{}.epub".format(workdir, self.book.get_book_id(), self.book.get_title())
         epub.write_epub(file_name, self.epub_book, {})
 
     def create_epub(self, workdir):
