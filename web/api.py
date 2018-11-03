@@ -1,9 +1,9 @@
 from flask import Flask
 from flask import jsonify, request
 
+from epubgen.Facade import Identity
 from epubgen.SafariApi import SafariApi
-from epubgen.job import Identity
-import uuid
+
 
 app = Flask(__name__)
 
@@ -46,7 +46,6 @@ def download():
 @app.route('/convert/<uid>/<book_id>')
 def convert(uid, book_id):
     pass
-
 
 
 if __name__ == "__main__":
