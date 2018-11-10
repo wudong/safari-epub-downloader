@@ -1,0 +1,8 @@
+__pycache__
+.git
+.idea
+.pytest_cache
+.s2i
+work
+ven
+venv
