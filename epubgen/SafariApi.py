@@ -7,9 +7,6 @@ from lxml import html
 from urllib.parse import urljoin, urlsplit, urlparse
 from pathlib import Path
 
-PATH = os.path.dirname(os.path.realpath(__file__))
-COOKIES_FILE = os.path.join(PATH, "cookies.json")
-
 
 class SafariApi:
     BASE_URL = "https://www.safaribooksonline.com"
@@ -21,7 +18,6 @@ class SafariApi:
         "accept-encoding": "gzip, deflate",
         "accept-language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
         "cache-control": "no-cache",
-        "cookie": "",
         "pragma": "no-cache",
         "referer": "https://www.safaribooksonline.com/home/",
         "upgrade-insecure-requests": "1",
@@ -54,6 +50,7 @@ class SafariApi:
             response = getattr(requests, "post" if post else "get")(
                 url,
                 headers=self.return_headers(url),
+                cookies=self.identity.get_cookie(),
                 data=data,
                 **kwargs
             )
@@ -75,15 +72,14 @@ class SafariApi:
         return response
 
     def return_cookies(self):
-        return " ".join(["{0}={1};".format(k, v) for k, v in self.identity.get_identity().items()])
+        return " ".join(["{0}={1};".format(k, v) for k, v in self.identity.get_cookie().items()])
 
     def return_headers(self, url):
-        if "safaribooksonline" in urlsplit(url).netloc:
-            self.HEADERS["cookie"] = self.return_cookies()
-
-        else:
-            self.HEADERS["cookie"] = ""
-
+        # if "safaribooksonline" in urlsplit(url).netloc:
+        #     self.HEADERS["cookie"] = self.return_cookies()
+        # else:
+        #     self.HEADERS["cookie"] = ""
+        #
         return self.HEADERS
 
     def update_cookies(self, jar):

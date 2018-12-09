@@ -1,4 +1,5 @@
 import json
+import logging
 
 from epubgen import SafariApi
 
@@ -38,6 +39,9 @@ class SafariBookResourceDownloader:
         cover_url = f"{book_info['cover']}896h/"
         toc_url = book_info["toc"]
 
+        logging.debug("Start downloading all resources.")
         self.api.download(work_dir, all_chapter_html_content_urls,
                           style_sheet_urls, image_urls, cover_url,
                           toc_url)
+
+        logging.debug("all resources is downloaded.");

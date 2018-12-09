@@ -55,6 +55,8 @@ class EpubManager:
                 return "image/png"
             if ".svg" == suffix.lower():
                 return "image/svg+xml"
+            if ".gif" == suffix.lower():
+                return "image/gif"
             raise RuntimeError(f"Unsupported image file format: {_image_filename}")
 
         item = epub.EpubImage()
@@ -67,7 +69,7 @@ class EpubManager:
         self.epub_book.add_item(item)
 
     def add_style(self, style_filename):
-        item = epub.EpubItem(uid="style_" + style_filename,
+        item = epub.EpubItem(uid="style_" + style_filename.replace("/", "_"),
                              file_name=style_filename,
                              media_type="text/css")
         item.content = self.book.get_text_content(style_filename)

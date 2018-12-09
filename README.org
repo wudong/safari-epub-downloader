@@ -1,7 +1,26 @@
-* Introduction
-Download book from Safari Online into ePub format
+* Safari Online books Epub downloader
 
-* Installation
+** Introduction
+Download book from Safari Online into ePub format.
+
+The book reader from safari lacks in functionality and
+usability compared to other ebook readers. I pretty much prefer Google play books to read/organize my ebooks. This
+tool is developed for the purpose.
+
+
+** Installation
+
 Install pipenv, then
 pipenv install
 
+** Usage
+
+python main.py --cookie cookiefile bookids
+
+where the cookie file are cookies from the browser after login onto the safari online website,
+and bookids are a list of book ids/
+
+** grep the cookie
+Because the safari website is not using when loggin, it is hard to login automatically through code.
+To continue download the book from then, we need to first login on the website, download the cookie and
+then we can use the cookie to download the epub.
