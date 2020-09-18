@@ -59,7 +59,7 @@ class SafariBook:
     @staticmethod
     def from_json_file(info_file, chapter_file, toc_file, folder=None):
         def parse_json_file(file_name):
-            with open(file_name) as fh:
+            with open(file_name, encoding='utf-8') as fh:
                 return json.load(fh)
 
         info_json = parse_json_file(info_file)

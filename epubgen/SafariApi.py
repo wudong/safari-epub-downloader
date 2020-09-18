@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 class SafariApi:
-    BASE_URL = "https://www.safaribooksonline.com"
+    BASE_URL = "https://learning.oreilly.com"
     LOGIN_URL = BASE_URL + "/accounts/login/"
     API_TEMPLATE = BASE_URL + "/api/v1/book/{0}/"
 
@@ -45,7 +45,7 @@ class SafariApi:
     def get_api_url(self, book_id: str):
         return self.API_TEMPLATE.format(book_id)
 
-    def requests_provider(self, url, post=False, data=None, update_cookies=True, **kwargs):
+    def requests_provider(self, url, post=False, data=None, update_cookies=False, **kwargs):
         try:
             response = getattr(requests, "post" if post else "get")(
                 url,
